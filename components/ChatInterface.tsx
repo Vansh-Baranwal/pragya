@@ -56,7 +56,7 @@ export default function ChatInterface({
                         <h2 className="text-lg font-bold tracking-tight">AI Research Hub</h2>
                     </div>
                     <div className="flex gap-2">
-                        <div className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-xs font-bold rounded-full">GEMINI PRO</div>
+                        <div className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 text-xs font-bold rounded-full">GROQ LLAMA</div>
                     </div>
                 </div>
                 <ExpertiseSlider level={expertiseLevel} onChange={onExpertiseChange} />
@@ -101,7 +101,7 @@ export default function ChatInterface({
                                 "p-4 rounded-2xl text-sm leading-relaxed",
                                 message.role === "user"
                                     ? "bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-500/10"
-                                    : "glass-morphism rounded-tl-none text-slate-800 dark:text-slate-200"
+                                    : "bg-slate-100 dark:bg-slate-800 rounded-tl-none text-slate-900 dark:text-white"
                             )}>
                                 {message.content}
 
