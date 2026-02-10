@@ -56,7 +56,7 @@ export default function ChatInterface({
                         <h2 className="text-lg font-bold tracking-tight">AI Research Hub</h2>
                     </div>
                     <div className="flex gap-2">
-                        <div className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 text-xs font-bold rounded-full">GROQ LLAMA</div>
+                        <div className="px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 text-xs font-bold rounded-full">PRAGYA</div>
                     </div>
                 </div>
                 <ExpertiseSlider level={expertiseLevel} onChange={onExpertiseChange} />
