@@ -9,7 +9,7 @@ export default function ApiKeyModal() {
     const [apiKey, setApiKey] = useState("");
 
     useEffect(() => {
-        const storedKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || localStorage.getItem("PRAGYA_API_KEY");
+        const storedKey = process.env.GROQ_API_KEY || localStorage.getItem("PRAGYA_GROQ_KEY");
         if (!storedKey) {
             setIsOpen(true);
         }
@@ -17,7 +17,7 @@ export default function ApiKeyModal() {
 
     const handleSave = () => {
         if (apiKey.trim()) {
-            localStorage.setItem("PRAGYA_API_KEY", apiKey);
+            localStorage.setItem("PRAGYA_GROQ_KEY", apiKey);
             // In a real app we might want to reload or update global state
             window.location.reload();
         }
@@ -34,7 +34,7 @@ export default function ApiKeyModal() {
                     </div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Activate Pragya</h2>
                     <p className="text-slate-500 dark:text-slate-400">
-                        Enter your Google Gemini API Key to start researching papers with AI assistance.
+                        Enter your Groq API Key to start researching papers with AI assistance.
                     </p>
 
                     <div className="w-full space-y-4 pt-4">

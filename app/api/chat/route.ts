@@ -1,70 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getVectorStore } from "@/lib/vector-store";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
+import { similaritySearch } from "@/lib/chunk-store";
 
 export async function POST(req: NextRequest) {
     try {
         const { question, expertiseLevel } = await req.json();
 
         if (!question) {
-            return NextResponse.json({ error: "No question provided" }, { status: 400 });
+            return NextResponse.json({ error: "Question is required" }, { status: 400 });
         }
 
-        const apiKey = req.headers.get("X-API-KEY") || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        const apiKey = req.headers.get("x-api-key") || process.env.GROQ_API_KEY;
+
         if (!apiKey) {
-            return NextResponse.json({ error: "Gemini API Key is missing. Please set it in the settings." }, { status: 401 });
+            return NextResponse.json({ error: "Groq API Key is not set" }, { status: 400 });
         }
 
-        const vectorStore = await getVectorStore(apiKey);
+        // Find relevant chunks
+        const relevantChunks = similaritySearch(question, 4);
 
-        // Similarity search
-        const results = await vectorStore.similaritySearch(question, 4);
-        const context = results.map(r => r.pageContent).join("\n\n");
-        const citations = Array.from(new Set(results.map(r => r.metadata.fileName || "Unknown Source")));
-
-        // Prompt construction based on expertise level
-        let levelInstruction = "";
-        switch (expertiseLevel) {
-            case "Novice":
-                levelInstruction = "Explain the concepts in simple, easy-to-understand terms. Avoid heavy jargon. Think like a friendly teacher explaining to a student.";
-                break;
-            case "Expert":
-                levelInstruction = "Provide a highly technical and detailed analysis. Use professional terminology and cite specific sections or data where applicable. Assume a deep understanding of the subject matter.";
-                break;
-            case "Intermediate":
-            default:
-                levelInstruction = "Provide a balanced explanation. Use professional terms but explain complex concepts where necessary. Suitable for someone with some background in the field.";
-                break;
+        if (relevantChunks.length === 0) {
+            return NextResponse.json({
+                error: "No document has been uploaded yet. Please upload a PDF first.",
+            }, { status: 400 });
         }
 
-        const prompt = `
-You are Pragya, a highly capable AI Research Assistant. Use the following pieces of context from a research paper to answer the user's question. 
-If you don't know the answer based on the context, just say that you don't know, don't try to make up an answer.
+        const context = relevantChunks.map(c => c.content).join("\n\n---\n\n");
 
-Context:
+        const levelInstructions: Record<string, string> = {
+            beginner: "Explain in simple terms, avoid jargon, use analogies.",
+            intermediate: "Use some technical terms but explain complex concepts.",
+            advanced: "Use technical language freely, be precise and detailed.",
+        };
+
+        const levelGuide = levelInstructions[expertiseLevel] || levelInstructions.intermediate;
+
+        const prompt = `You are Pragya, an intelligent AI study assistant. Answer the user's question based ONLY on the provided document context.
+
+${levelGuide}
+
+Context from the uploaded document:
+---
 ${context}
+---
 
-User Question: ${question}
+User's Question: ${question}
 
-Target Audience Level: ${expertiseLevel}
-Instructions for response: ${levelInstruction}
+Provide a clear, helpful answer based on the context. If the context doesn't contain enough information to answer, say so honestly.`;
 
-Please provide a clear and concise response. End your response with a "Sources" section listing the filenames provided in the context if applicable.
-    `;
+        const groq = new Groq({ apiKey });
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const chatCompletion = await groq.chat.completions.create({
+            messages: [
+                { role: "user", content: prompt },
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.5,
+            max_tokens: 1024,
+        });
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        const answer = chatCompletion.choices[0]?.message?.content || "No response generated.";
 
         return NextResponse.json({
-            answer: text,
-            citations: citations
+            answer,
+            sources: relevantChunks.map(c => c.metadata.fileName),
         });
+
     } catch (error: any) {
         console.error("Chat error:", error);
-        return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+        return NextResponse.json({
+            error: error.message || "Internal server error",
+        }, { status: 500 });
     }
 }

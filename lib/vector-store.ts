@@ -15,7 +15,7 @@ export async function getVectorStore(apiKey?: string) {
 
         const embeddings = new GoogleGenerativeAIEmbeddings({
             apiKey: finalApiKey,
-            modelName: "embedding-001",
+            modelName: "gemini-embedding-001",
             taskType: TaskType.RETRIEVAL_DOCUMENT,
         });
 
@@ -32,7 +32,7 @@ export async function resetVectorStore(apiKey?: string) {
 
     const embeddings = new GoogleGenerativeAIEmbeddings({
         apiKey: finalApiKey,
-        modelName: "embedding-001",
+        modelName: "gemini-embedding-001",
         taskType: TaskType.RETRIEVAL_DOCUMENT,
     });
 

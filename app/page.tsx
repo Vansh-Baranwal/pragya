@@ -15,7 +15,7 @@ export default function Home() {
 
   // Load API Key from localStorage for client-side use if needed (passed in headers or used in fetch if server env allows)
   useEffect(() => {
-    const key = localStorage.getItem("PRAGYA_API_KEY");
+    const key = localStorage.getItem("PRAGYA_GROQ_KEY");
     if (key) {
       // We could set a global state or just ensure requests use it if we were doing client-side AI
       // But here we rely on the server having it or passing it in headers
@@ -33,7 +33,7 @@ export default function Home() {
       const response = await fetch("/api/ingest", {
         method: "POST",
         headers: {
-          "X-API-KEY": localStorage.getItem("PRAGYA_API_KEY") || "",
+          "X-API-KEY": localStorage.getItem("PRAGYA_GROQ_KEY") || "",
         },
         body: formData,
       });
@@ -83,7 +83,7 @@ export default function Home() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-KEY": localStorage.getItem("PRAGYA_API_KEY") || "",
+          "X-API-KEY": localStorage.getItem("PRAGYA_GROQ_KEY") || "",
         },
         body: JSON.stringify({
           question: text,

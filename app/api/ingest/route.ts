@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
-import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { resetVectorStore } from "@/lib/vector-store";
-import { Document } from "@langchain/core/documents";
+import { resetChunkStore, addChunks } from "@/lib/chunk-store";
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,16 +9,14 @@ export async function POST(req: NextRequest) {
         const file = formData.get("file") as File;
 
         if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
+            return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
         }
 
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const apiKey = req.headers.get("X-API-KEY") || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-        if (!apiKey) {
-            return NextResponse.json({ error: "Gemini API Key is missing. Please set it in the settings." }, { status: 401 });
+        if (!file.name.endsWith(".pdf")) {
+            return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 });
         }
+
+        const buffer = Buffer.from(await file.arrayBuffer());
 
         // Extract text from PDF
         console.log(`Extracting text from: ${file.name}`);
@@ -33,36 +29,37 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Could not extract text from PDF" }, { status: 400 });
         }
 
-        // Split text into chunks
+        // Split text into chunks (~1000 chars with 200 overlap)
         console.log("Splitting text into chunks...");
-        const splitter = new RecursiveCharacterTextSplitter({
-            chunkSize: 1000,
-            chunkOverlap: 200,
-        });
+        const chunkSize = 1000;
+        const chunkOverlap = 200;
+        const chunks: { content: string; metadata: { fileName: string } }[] = [];
 
-        const docs = await splitter.splitDocuments([
-            new Document({
-                pageContent: text,
-                metadata: { fileName: file.name },
-            }),
-        ]);
-        console.log(`Chunks created: ${docs.length}`);
+        for (let i = 0; i < text.length; i += chunkSize - chunkOverlap) {
+            const chunkText = text.slice(i, i + chunkSize).trim();
+            if (chunkText.length > 0) {
+                chunks.push({
+                    content: chunkText,
+                    metadata: { fileName: file.name },
+                });
+            }
+        }
+        console.log(`Chunks created: ${chunks.length}`);
 
-        // Initialize/Reset and store in vector store
-        console.log("Storing in vector store...");
-        const vectorStore = await resetVectorStore(apiKey);
-        await vectorStore.addDocuments(docs);
+        // Reset and store chunks
+        console.log("Storing chunks...");
+        resetChunkStore();
+        addChunks(chunks);
         console.log("Stored successfully");
 
         return NextResponse.json({
             message: "File processed successfully",
-            chunks: docs.length
+            chunks: chunks.length,
         });
     } catch (error: any) {
-        console.error("Ingestion error full details:", error);
+        console.error("Ingestion error:", error);
         return NextResponse.json({
             error: error.message || "Internal server error",
-            details: error.stack || null
         }, { status: 500 });
     }
 }
